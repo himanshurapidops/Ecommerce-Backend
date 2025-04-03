@@ -1,53 +1,51 @@
-import fs from "fs"
-import {v2 as cloudinary} from 'cloudinary';
-          
-cloudinary.config({ 
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
-  api_key: process.env.CLOUDINARY_API_KEY, 
-  api_secret:process.env.CLOUDINARY_API_SECRET 
-});     
+import { v2 as cloudinary } from 'cloudinary';
+import dotenv from 'dotenv';
+import fs from 'fs';
+import { ApiError } from './ApiError';
+dotenv.config();
 
-const uploadOnCloudinary = async(localPathFile)=>{
-    try {
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-        if(!localPathFile) return null;
-       
+export const uploadToCloudinary = async (file) => {
+  try {
+    const result = await cloudinary.uploader.upload(file.path, {
+      folder: 'ecommerce',
+      use_filename: true,
+      unique_filename: true,
+      overwrite: true,
+      resource_type: 'image',
+      public_id: `${Date.now()}-${file.originalname}`,
+      tags: 'ecommerce',
+      quality: 'auto',
+      fetch_format: 'auto',
+      allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+      transformation: [
+        { width: 300, height: 300, crop: 'scale' },
+        { width: 1000, height: 1000, crop: 'scale' },
+        { width: 2000, height: 2000, crop: 'scale' }, 
+      ],
+    });
 
-        const response = await cloudinary.uploader.upload(localPathFile,{
-            resource_type : "auto"
-        })
+    fs.unlinkSync(file.path, (err) => {
+      if (err) console.error('Error deleting file ${file.path}:', err);
+    });
 
-      
+    return result.secure_url;
 
-        fs.unlinkSync(localPathFile)
-        console.log("file is uploaded on cloudinary",response.url);
-         console.log(response)
-        
-        return response;
-
-    }catch(error){
-
-        fs.unlinkSync(localPathFile);///remove  the locally saved temp file as the upload operation failed
-        return null
-
-    }
+  } catch (error) {
+    throw new ApiError('Error uploading to Cloudinary: ${error.message}');
+  }
 };
-// not neccessary 
-async function run(){
 
- 
-
-
-    const result= await cloudinary.v2.uploader.upload("https://upload.wikimedia.org/wikipedia/commons/a/ae/Olympic_flag.jpg",{ public_id: "olympic_flag" },  function(error, result){
-     if (error) {
-       console.error(error);
-     } else {
-      console.log(result.secure_url)
-       console.log(result);
-     }
-   });
-
-   
-}
-
-  export { uploadOnCloudinary }
+export const deleteFromCloudinary = async (publicId) => {
+  try {
+    await cloudinary.uploader.destroy(publicId);
+    return { success: true };
+  } catch (error) {
+    throw new ApiError('Error deleting from Cloudinary: ${error.message}');
+  }
+};
