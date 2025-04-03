@@ -153,6 +153,42 @@ const verifyEmail = asyncHandler(async (req, res) => {
       throw new ApiError(400, "Invalid token type");
     }
 
+      // Token is expired
+    if(decoded.payload.exp < Date.now() / 1000) {
+ 
+      const verificationToken = generateVerificationToken(decoded._id, "email-verification");
+  
+      // Store token hash in user document
+      const user = await User.findById(decoded._id);
+      user.verificationToken = verificationToken;
+      await user.save();
+  
+      // Create verification URL  
+
+      const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+
+      // Create email message
+      const message = ` 
+        <h1>Verify Your Email</h1>
+        <p>Please click on the link below to verify your email address:</p>
+        <a href="${verificationUrl}" target="_blank">Verify Email</a>
+        <p>If you did not request this, please ignore this email.</p>
+        <p>This link will expire in ${process.env.VERIFICATION_TOKEN_EXPIRY || "1 hour"}.</p>
+
+      `;
+
+      
+  
+      sendEmail({
+        email: user.email,
+        subject: "Email Verification",
+        message
+      });
+
+      
+
+    }
+
     // Find user with the verification token
     const user = await User.findOne({ 
       _id: decoded._id,
@@ -179,55 +215,6 @@ const verifyEmail = asyncHandler(async (req, res) => {
   }
 });
 
-// Resend verification email
-const resendVerificationEmail = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) {
-    throw new ApiError(400, "Email is required");
-  }
-
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    throw new ApiError(404, "User not found");
-  }
-
-  if (user.status === "Active") {
-    throw new ApiError(400, "Email is already verified");
-  }
-
-  // Generate new verification token
-  const verificationToken = generateVerificationToken(user._id, "email-verification");
-  user.verificationToken = verificationToken;
-  await user.save();
-
-  // Create verification URL
-  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-
-  // Create email message
-  const message = `
-    <h1>Verify Your Email</h1>
-    <p>Please click on the link below to verify your email address:</p>
-    <a href="${verificationUrl}" target="_blank">Verify Email</a>
-    <p>If you did not request this, please ignore this email.</p>
-    <p>This link will expire in ${process.env.VERIFICATION_TOKEN_EXPIRY || "1 hour"}.</p>
-  `;
-
-  try {
-    await sendEmail({
-      email: user.email,
-      subject: "Email Verification",
-      message
-    });
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, {}, "Verification email resent successfully"));
-  } catch (error) {
-    throw new ApiError(500, "Failed to send verification email");
-  }
-});
 
 // Request password reset
 const forgotPassword = asyncHandler(async (req, res) => {
@@ -316,8 +303,45 @@ const loginUser = asyncHandler(async (req, res) => {
 
   // Check if user has verified their email
   if (user.status === "Inactive") {
-    throw new ApiError(401, "Please verify your email before logging in");
+
+    const verificationToken = generateVerificationToken(user._id, "email-verification");
+
+    user.verificationToken = verificationToken;
+
+    user.save();
+
+    // Create verification URL
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+
+    // Create email message
+    const message = `
+      <h1>Verify Your Email</h1>
+      <p>Please click on the link below to verify your email address:</p>
+      <a href="${verificationUrl}" target="_blank">Verify Email</a>
+      <p>If you did not request this, please ignore this email.</p>
+      <p>This link will expire in ${process.env.VERIFICATION_TOKEN_EXPIRY || "6 hour"}.</p>
+    `;
+
+    try {
+
+      await sendEmail({
+        email: user.email,
+        subject: "Email Verification",
+        message
+      });
+
+      return res
+        .status(403)
+        .json(new ApiResponse(200, {}, "Verification email sent successfully"));
+
+
+    } catch (error) {
+      throw new ApiError(500, "Failed to send verification email");
+    }
   }
+
+
+
 
   // Check if user account is suspended
   if (user.status === "Suspended") {
@@ -385,7 +409,6 @@ const logoutUser = asyncHandler(async (req, res) => {
     .clearCookie("refreshToken", options)
     .json(new ApiResponse(200, {}, "User logged Out"));
 });
-
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { fullname, email } = req.body;
   if (!fullname || !email) {
@@ -410,16 +433,68 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "account details updated successfully"));
 });
 
+const getCurrentUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select(
+    "-password -refreshToken -verificationToken -resetPasswordToken"
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User details fetched successfully"));
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { password, confirmPassword } = req.body;
+
+  if (password !== confirmPassword) {
+    throw new ApiError(400, "Passwords do not match");
+  }
+
+  try {
+    // Verify and decode token
+    const decoded = jwt.verify(token, process.env.TOKEN_SECRET); 
+
+    // Check token type
+
+    if (decoded.type !== "password-reset") {
+      throw new ApiError(400, "Invalid token type");
+    }
+
+    // Find user with valid reset token
+    const user = await User.findOne({
+      _id: decoded._id,
+      resetPasswordToken: token
+    });
+
+    if (!user) {
+      throw new ApiError(400, "Invalid or expired reset token");
+    }
+
+    // Update password and clear reset token fields
+    user.password = password;
+    user.resetPasswordToken = ""; // Clear the token to invalidate it
+    await user.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Password reset successfully"));
+  } catch (error) {
+    throw new ApiError(400, "Invalid or expired reset token");
+  }
+});
 
 export {
 
   registerUser,
   verifyEmail,
-  resendVerificationEmail,
+  loginUser,
   refreshAccessToken,
   forgotPassword,
+  resetPassword,
   logoutUser,
-  loginUser,
-  updateAccountDetails    
+  updateAccountDetails,
+  getCurrentUser  ,
+   
 
 };
