@@ -1,4 +1,4 @@
-import Router from "./user.routes";
+import Router from "express";
 import {
   createAddress,
   getUserAddresses,

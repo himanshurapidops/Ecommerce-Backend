@@ -1,7 +1,7 @@
-import { ApiError } from "../utils/ApiError";
-import { asyncHandler } from "../utils/asyncHandler";
-import { Address } from "../models/address.model";
-import { ApiResponse } from "../utils/ApiResponse";
+import { ApiError } from "../utils/ApiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import Address from "../models/address.model.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
 export const createAddress = asyncHandler(async (req, res) => {
   const { addressLine1, city, state, pincode, country, mobile } = req.body;
@@ -28,6 +28,8 @@ export const createAddress = asyncHandler(async (req, res) => {
 export const getUserAddresses = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
+  // const userId = "67efb3efdbe41b3e5d5f2e66";
+
   const address = await Address.find({ userId });
 
   if (!address) {
@@ -52,7 +54,6 @@ export const getAddressById = asyncHandler(async (req, res) => {
 export const updateAddress = asyncHandler(async (req, res) => {
   const { addressLine1, city, state, pincode, country, mobile } = req.body;
   const addressId = req.params.id;
-  const userId = req.user._id;
 
   if (!addressLine1 || !city || !state || !pincode || !country || !mobile) {
     throw new ApiError(400, "All fields are required");

@@ -1,9 +1,7 @@
 import Product from "../models/product.model.js";
 import Category from "../models/category.model.js";
-import { uploadToCloudinary } from "../utils/cloudinary.js";
-import { validationResult } from "express-validator";
+import { uploadToCloudinary } from "../utils/cloudnary.js";
 import mongoose from "mongoose";
-import fs from "fs";
 
 export const getAllProducts = async (req, res) => {
   try {
