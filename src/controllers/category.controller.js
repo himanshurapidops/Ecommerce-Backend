@@ -12,14 +12,24 @@ export const createCategory = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Category name is required");
   }
 
+  const existingCategory = await Category.findOne({
+    $or: [{ name }, { slug: slug(name) }],
+  });
+
+  if (existingCategory) {
+    throw new ApiError(400, "Category already exists");
+  }
+
   const category = await Category.create({
     name,
     slug: slug(name),
   });
 
-  category.save();
+  if (!category) {
+    throw new ApiError(500, "Failed to create category");
+  }
 
-  res.json(new ApiResponse(201, "Category created successfully"));
+  res.json(new ApiResponse(201, category, "Category created successfully"));
 });
 
 export const getCategories = asyncHandler(async (req, res) => {
@@ -29,24 +39,35 @@ export const getCategories = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Categories not found");
   }
 
-  res.json(new ApiResponse(200, categories));
+  res.json(new ApiResponse(200, categories, "Categories fetched successfully"));
 });
 
 export const updateCategory = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
+  const { slug: categorySlug } = req.params;
   const { name } = req.body;
 
-  const category = await Category.findOne({ slug });
+  if (!name) {
+    throw new ApiError(400, "Category name is required");
+  }
 
-  if (!category) {
+  const updatedCategory = await Category.findOneAndUpdate(
+    { slug: categorySlug },
+    {
+      name,
+      slug: slug(name),
+    },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedCategory) {
     throw new ApiError(404, "Category not found");
   }
 
-  category.name = name;
-  category.slug = slug(name);
-  await category.save();
-
-  res.json(new ApiResponse(200, "Category updated successfully"));
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedCategory, "Category updated successfully")
+    );
 });
 
 export const deleteCategory = asyncHandler(async (req, res) => {
@@ -58,18 +79,20 @@ export const deleteCategory = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Category not found");
   }
 
-  const products = await Product.find({ category: category._id });
+  const productsCount = await Product.countDocuments({
+    category: category._id,
+  });
 
-  if (products.length > 0) {
-    throw new ApiError(400, "Cannot delete category with products");
+  if (productsCount > 0) {
+    await Product.updateMany(
+      { category: category._id },
+      { $pull: { category: category._id } }
+    );
   }
 
-  await Product.updateMany(
-    { categories: category._id },
-    { $pull: { categories: category._id } }
-  );
+  await Category.deleteOne({ _id: category._id });
 
-  await Category.findByIdAndDelete(category._id);
-
-  res.json(new ApiResponse(200, "Category deleted successfully"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Category deleted successfully"));
 });

@@ -7,7 +7,6 @@ import {
 const router = express.Router();
 
 router.post("/payment-intent", createPaymentIntent);
-
 router.post("/", createOrder);
 
 export default router;

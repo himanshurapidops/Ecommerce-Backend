@@ -14,13 +14,14 @@ import {
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 const router = Router();
 
+// auth routes
 router.route("/login").post(loginUser);
-
-//secure route
 router.route("/register").post(registerUser);
-router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/refresuh-token").post(refreshAccessToken);
 router.route("/verify-email/:token").get(verifyEmail);
+
+//secure route
+router.route("/logout").post(verifyJWT, logoutUser);
 
 router.route("/forget-password").post(verifyJWT, forgotPassword);
 router.route("/reset-password/:token").post(resetPassword);

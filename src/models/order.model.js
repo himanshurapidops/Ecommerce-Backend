@@ -1,22 +1,22 @@
-import { model, Schema } from 'mongoose';
+import { model, Schema } from "mongoose";
 
 const orderSchema = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     orderId: {
       type: String,
-      required: [true, 'Provide Order ID!'],
+      required: [true, "Provide Order ID!"],
       unique: true,
     },
     products: [
       {
         productId: {
           type: Schema.Types.ObjectId,
-          ref: 'Product',
+          ref: "Product",
           required: true,
         },
         quantity: {
@@ -32,16 +32,16 @@ const orderSchema = new Schema(
     ],
     paymentId: {
       type: String,
-      default: '',
+      default: "",
     },
     paymentStatus: {
       type: String,
-      enum: ['Pending', 'Completed', 'Failed'],
-      default: 'Pending',
+      enum: ["Pending", "Completed", "Failed"],
+      default: "Pending",
     },
     deliveryAddress: {
       type: Schema.Types.ObjectId,
-      ref: 'Address',
+      ref: "Address",
       required: true,
     },
     totalAmount: {
@@ -50,12 +50,12 @@ const orderSchema = new Schema(
     },
     orderStatus: {
       type: String,
-      enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
-      default: 'Pending',
+      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      default: "Pending",
     },
   },
   { timestamps: true }
 );
 
-const Order = model('Order', orderSchema);
+const Order = model("Order", orderSchema);
 export default Order;

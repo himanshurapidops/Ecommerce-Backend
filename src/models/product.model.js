@@ -1,28 +1,28 @@
-import { model, Schema } from 'mongoose';
+import { model, Schema } from "mongoose";
 
 const productSchema = new Schema(
   {
     name: {
       type: String,
-      required: [true, 'Provide product name!'],
+      required: [true, "Provide product name!"],
     },
     description: {
       type: String,
-      required: [true, 'Provide product description!'],
+      required: [true, "Provide product description!"],
     },
     images: [
       {
         type: String,
-        required: [true, 'Provide product images!'],
+        required: [true, "Provide product images!"],
       },
     ],
     brand: {
       type: String,
-      default: '',
+      default: "",
     },
-    slug : {
+    slug: {
       type: String,
-      required: [true, 'Provide product slug!'],
+      required: [true, "Provide product slug!"],
       unique: true,
     },
     price: {
@@ -42,13 +42,15 @@ const productSchema = new Schema(
       type: Number,
       default: 0,
     },
-    category: [{
-      type: Schema.Types.ObjectId,
-      ref: 'Category',
-    }]
+    category: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Category",
+      },
+    ],
   },
   { timestamps: true }
 );
 
-const Product = model('Product', productSchema);
+const Product = model("Product", productSchema);
 export default Product;

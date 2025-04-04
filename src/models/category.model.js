@@ -13,7 +13,7 @@ const categorySchema = new Schema(
       trim: true,
       unique: true,
     },
-  },
+  },  
   { timestamps: true }
 );
 
