@@ -2,6 +2,10 @@ import Product from "../models/product.model.js";
 import Category from "../models/category.model.js";
 import { uploadToCloudinary } from "../utils/cloudnary.js";
 import mongoose from "mongoose";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import slug from "slug";
 
 export const getAllProducts = async (req, res) => {
   try {
@@ -105,72 +109,74 @@ export const getProductById = async (req, res) => {
   }
 };
 
-export const createProduct = async (req, res) => {
-  try {
-    const { name, description, brand } = req.body;
-    const price = parseFloat(req.body.price);
-    const countInStock = parseInt(req.body.countInStock, 10);
-    let category = req.body.category;
+export const createProduct = asyncHandler(async (req, res) => {
+  const { name, description, brand, price, countInStock, category } = req.body;
 
-    if (!name || !description || isNaN(price) || isNaN(countInStock)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid input data." });
-    }
-
-    let categoryIds = Array.isArray(category) ? category : [category];
-    categoryIds = categoryIds.filter((id) =>
-      mongoose.Types.ObjectId.isValid(id)
-    );
-
-    const validCategories = await Category.find({ _id: { $in: categoryIds } });
-    if (validCategories.length !== categoryIds.length) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid categories provided." });
-    }
-
-    let uploadedImages = [];
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        try {
-          const imageUrl = await uploadToCloudinary(file);
-          uploadedImages.push(imageUrl);
-        } catch (uploadError) {
-          return res.status(500).json({
-            success: false,
-            message: "Error uploading images",
-            error: uploadError.message,
-          });
-        }
-      }
-    }
-
-    const product = new Product({
-      name,
-      description,
-      category: categoryIds,
-      brand,
-      price,
-      countInStock,
-      images: uploadedImages,
-    });
-
-    const savedProduct = await product.save();
-    res.status(201).json({
-      success: true,
-      message: "Product created successfully",
-      product: savedProduct,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error creating product",
-      error: error.message,
-    });
+  // Basic validations
+  if (!name || !description || isNaN(price) || isNaN(countInStock)) {
+    throw new ApiError(400, "Invalid input data.");
   }
-};
 
+  if (!req.files || req.files.length === 0) {
+    throw new ApiError(400, "No images uploaded.");
+  }
+
+  // Normalize categories
+  let categoryIds = Array.isArray(category) ? category : [category];
+  categoryIds = categoryIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+
+  if (categoryIds.length === 0) {
+    throw new ApiError(400, "Invalid categories provided.");
+  }
+
+  const validCategories = await Category.find({ _id: { $in: categoryIds } });
+  if (validCategories.length !== categoryIds.length) {
+    throw new ApiError(400, "Some provided categories do not exist.");
+  }
+
+  const uploadedImages = [];
+  for (const file of req.files) {
+    try {
+      const result = await uploadToCloudinary(file.buffer, file.originalname);
+      uploadedImages.push(result.secure_url);
+    } catch (uploadError) {
+      throw new ApiError(500, "Error uploading images to Cloudinary", [
+        uploadError.message,
+      ]);
+    }
+  }
+
+  if (uploadedImages.length === 0) {
+    throw new ApiError(400, "No images uploaded.");
+  }
+
+  if (uploadedImages.length > 5) {
+    throw new ApiError(400, "Maximum of 5 images allowed.");
+  }
+
+  const slugName = slug(name);
+  const existingProduct = await Product.findOne({ slug: slugName });
+  if (existingProduct) {
+    throw new ApiError(400, "Product with the same name already exists.");
+  }
+
+  const product = new Product({
+    name,
+    description,
+    brand,
+    price: parseFloat(price),
+    countInStock: parseInt(countInStock, 10),
+    category: categoryIds,
+    images: uploadedImages,
+    slug: slugName,
+  });
+
+  const savedProduct = await product.save();
+
+  res
+    .status(201)
+    .json(new ApiResponse(201, savedProduct, "Product created successfully."));
+});
 export const updateProduct = async (req, res) => {
   try {
     const { productId: id } = req.params;

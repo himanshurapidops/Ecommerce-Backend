@@ -13,10 +13,6 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(morgan("dev"));
 app.use(express.static("public"));
 
-app.all("*", (req, res) => {
-  res.status(404).json(new ApiResponse(404, {}, "Route not found"));
-});
-
 //routes import
 
 import userRouter from "./routes/user.routes.js";
@@ -43,6 +39,10 @@ app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/cart", cartRouter);
 
 app.use("/api/v1/category", CategoryRouter);
+
+app.all("*", (req, res) => {
+  res.status(404).json(new ApiResponse(404, {}, "Route not found"));
+});
 
 app.use(globalErrorHandler);
 

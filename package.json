@@ -25,6 +25,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.0",
     "slug": "^10.0.0",
+    "streamifier": "^0.1.1",
     "stripe": "^18.0.0",
     "winston": "^3.17.0"
   },
