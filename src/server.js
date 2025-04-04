@@ -1,6 +1,10 @@
 import dotenv from "dotenv";
 import app from "./app.js";
 import connectDB from "./database/db.js";
+import listEndpoints from "express-list-endpoints";
+
+console.log("📌 All Registered Routes:");
+// console.table(listEndpoints(app));
 
 dotenv.config({ path: "../env" });
 

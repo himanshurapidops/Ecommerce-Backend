@@ -524,7 +524,7 @@ const resetPassword = asyncHandler(async (req, res) => {
   }
 });
 
-export const changePassword = asyncHandler(async (req, res) => {
+const changePassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword, confirmPassword } = req.body;
 
   if (newPassword !== confirmPassword) {

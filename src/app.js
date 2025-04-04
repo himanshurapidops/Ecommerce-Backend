@@ -1,7 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import globalErrorHandler from "./middlewares/error.middleware.js";
+import globalErrorHandler from "./middlewares/globalErrorHandler.js";
 import morgan from "morgan";
 
 const app = express();
@@ -13,8 +13,8 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(morgan("dev"));
 app.use(express.static("public"));
 
-app.get("*", (req, res) => {
-  res.status(200).json(new ApiResponse(200, {}, "Success"));
+app.all("*", (req, res) => {
+  res.status(404).json(new ApiResponse(404, {}, "Route not found"));
 });
 
 //routes import

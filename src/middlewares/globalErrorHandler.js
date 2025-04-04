@@ -1,5 +1,4 @@
-// middlewares/globalErrorHandler.js
-import ApiResponse from "../utils/ApiResponse.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
 const globalErrorHandler = (err, req, res, next) => {
   const statusCode = err.statusCode || 500;
@@ -17,4 +16,4 @@ const globalErrorHandler = (err, req, res, next) => {
     );
 };
 
-module.exports = globalErrorHandler;
+export default globalErrorHandler;

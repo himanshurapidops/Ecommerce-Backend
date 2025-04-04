@@ -17,7 +17,7 @@ const router = Router();
 // auth routes
 router.route("/login").post(loginUser);
 router.route("/register").post(registerUser);
-router.route("/refresuh-token").post(refreshAccessToken);
+router.route("/refresh-token").post(refreshAccessToken);
 router.route("/verify-email/:token").get(verifyEmail);
 
 //secure route
