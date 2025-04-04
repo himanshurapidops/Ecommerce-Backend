@@ -6,42 +6,42 @@ const userSchema = new Schema(
   {
     fullName: {
       type: String,
-      required: [true, 'Provide fullName!'],
+      required: [true, "Provide fullName!"],
     },
     email: {
       type: String,
-      required: [true, 'Provide Email!'],
+      required: [true, "Provide Email!"],
       unique: true,
     },
     password: {
       type: String,
-      required: [true, 'Provide Password!'],
+      required: [true, "Provide Password!"],
     },
     mobile: {
       type: String,
-      default: '',
+      default: "",
     },
     status: {
       type: String,
-      enum: ['Active', 'Inactive', 'Suspended'],
-      default: 'Inactive',
+      enum: ["Active", "Inactive", "Suspended"],
+      default: "Inactive",
     },
     refreshToken: {
       type: String,
-      default: '',
+      default: "",
     },
     verificationToken: {
       type: String,
-      default: '',
+      default: "",
     },
     resetPasswordToken: {
       type: String,
-      default: '',
+      default: "",
     },
     role: {
       type: String,
-      enum: ['ADMIN', 'USER'],
-      default: 'USER',
+      enum: ["ADMIN", "CUSTOMER"],
+      default: "CUSTOMER",
     },
   },
   { timestamps: true }
@@ -64,7 +64,7 @@ userSchema.methods.generateAccessToken = function () {
       email: this.email,
       fullName: this.fullName,
       role: this.role,
-      status: this.status
+      status: this.status,
     },
     process.env.ACCESS_TOKEN_SECRET,
     {

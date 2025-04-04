@@ -1,11 +1,13 @@
 import nodemailer from "nodemailer";
 
-
 const transporter = nodemailer.createTransport({
-  service: process.env.SMPT_SERVICE,
+  service: process.env.SMTP_SERVICE,
+  port: 678,
+  secure: true,
+  host: "smpt.gmail.com",
   auth: {
-    user: process.env.SMPT_EMAIL,
-    pass: process.env.SMPT_PASSWORD,
+    user: process.env.SMTP_EMAIL,
+    pass: process.env.SMTP_PASSWORD,
   },
 });
 export const sendEmail = async (options) => {
@@ -16,12 +18,11 @@ export const sendEmail = async (options) => {
     html: options.message,
   };
 
-   transporter.sendMail(mailOptions, function (error, info) {
+  transporter.sendMail(mailOptions, function (error, info) {
     if (error) {
       console.log(error);
-    } else {    
+    } else {
       console.log("Email sent: " + info.response);
     }
   });
 };
-

@@ -10,15 +10,14 @@ const generateVerificationToken = (userId, type) => {
   return jwt.sign(
     {
       _id: userId,
-      type: type // Either "email-verification" or "password-reset"
+      type: type, // Either "email-verification" or "password-reset"
     },
     process.env.TOKEN_SECRET,
     {
-      expiresIn: process.env.VERIFICATION_TOKEN_EXPIRY || "1h" // Default 1 hour
+      expiresIn: process.env.VERIFICATION_TOKEN_EXPIRY || "1h",
     }
   );
 };
-
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
@@ -44,15 +43,13 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 
     const options = {
-      httpOnly: true, 
+      httpOnly: true,
       secure: true,
       sameSite: strict,
     };
 
-    const {
-      accessToken,
-      newRefreshToken,
-    } = await generateAccessAndRefreshToken(user._id);
+    const { accessToken, newRefreshToken } =
+      await generateAccessAndRefreshToken(user._id);
 
     return res
       .status(200)
@@ -70,10 +67,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-
-
 // Handle user registration with email verification
 const registerUser = asyncHandler(async (req, res) => {
+  console.log("hi");
   const { fullName, email, mobile, password } = req.body;
 
   if ([fullName, email, password].some((field) => field?.trim() === "")) {
@@ -93,12 +89,15 @@ const registerUser = asyncHandler(async (req, res) => {
     fullName,
     email,
     password,
-    mobile
+    mobile,
   });
 
   // Generate verification token
-  const verificationToken = generateVerificationToken(user._id, "email-verification");
-  
+  const verificationToken = await generateVerificationToken(
+    user._id,
+    "email-verification"
+  );
+
   // Store token hash in user document
   user.verificationToken = verificationToken;
   await user.save();
@@ -112,30 +111,36 @@ const registerUser = asyncHandler(async (req, res) => {
     <p>Please click on the link below to verify your email address:</p>
     <a href="${verificationUrl}" target="_blank">Verify Email</a>
     <p>If you did not request this, please ignore this email.</p>
-    <p>This link will expire in ${process.env.VERIFICATION_TOKEN_EXPIRY || "1 hour"}.</p>
+    <p>${verificationToken}</p>
+    <p>This link will expire in ${
+      process.env.VERIFICATION_TOKEN_EXPIRY || "1 hour"
+    }.</p>
   `;
 
   try {
     await sendEmail({
       email: user.email,
       subject: "Email Verification",
-      message
+      message,
     });
 
     const createdUser = await User.findById(user._id).select(
-      "-password -refreshToken -verificationToken"
+      "-password -refreshToken -verificationToken -resetPasswordToken"
     );
 
     return res
       .status(201)
-      .json(new ApiResponse(
-        201, 
-        createdUser, 
-        "User registered. Please verify your email address."
-      ));
+      .json(
+        new ApiResponse(
+          201,
+          createdUser,
+          "User registered. Please verify your email address."
+        )
+      );
   } catch (error) {
     // Delete user if email fails to send
     await User.findByIdAndDelete(user._id);
+
     throw new ApiError(500, "Failed to send verification email");
   }
 });
@@ -144,77 +149,68 @@ const registerUser = asyncHandler(async (req, res) => {
 const verifyEmail = asyncHandler(async (req, res) => {
   const { token } = req.params;
 
-  try {
-    // Verify and decode token
-    const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+  const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
 
-    // Check token type
-    if (decoded.type !== "email-verification") {
-      throw new ApiError(400, "Invalid token type");
-    }
+  // Check token type
+  if (decoded.type !== "email-verification") {
+    throw new ApiError(400, "Invalid token type");
+  }
 
-      // Token is expired
-    if(decoded.payload.exp < Date.now() / 1000) {
- 
-      const verificationToken = generateVerificationToken(decoded._id, "email-verification");
-  
-      // Store token hash in user document
-      const user = await User.findById(decoded._id);
-      user.verificationToken = verificationToken;
-      await user.save();
-  
-      // Create verification URL  
+  // Token is expired
+  if (decoded.exp < Date.now() / 1000) {
+    const verificationToken = generateVerificationToken(
+      decoded._id,
+      "email-verification"
+    );
 
-      const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-
-      // Create email message
-      const message = ` 
-        <h1>Verify Your Email</h1>
-        <p>Please click on the link below to verify your email address:</p>
-        <a href="${verificationUrl}" target="_blank">Verify Email</a>
-        <p>If you did not request this, please ignore this email.</p>
-        <p>This link will expire in ${process.env.VERIFICATION_TOKEN_EXPIRY || "1 hour"}.</p>
-
-      `;
-
-      
-  
-      sendEmail({
-        email: user.email,
-        subject: "Email Verification",
-        message
-      });
-
-      
-
-    }
-
-    // Find user with the verification token
-    const user = await User.findOne({ 
-      _id: decoded._id,
-      verificationToken: token
-    });
-
-    if (!user) {
-      throw new ApiError(400, "Invalid or expired verification token");
-    }
-
-    // Update user status and clear verification token
-    user.status = "Active";
-    user.verificationToken = ""; // Clear the token to invalidate it
+    // Store token hash in user document
+    const user = await User.findById(decoded._id);
+    user.verificationToken = verificationToken;
     await user.save();
 
-    return res
-      .status(200)
-      .json(new ApiResponse(200, {}, "Email verified successfully"));
-  } catch (error) {
-    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
-      throw new ApiError(400, "Invalid or expired verification token");
-    }
-    throw error;
-  }
-});
+    console.log(user);
 
+    // Create verification URL
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+
+    // Create email message
+    const message = ` 
+      <h1>Verify Your Email</h1>
+      <p>Please click on the link below to verify your email address:</p>
+      <a href="${verificationUrl}" target="_blank">Verify Email</a>
+      <p>If you did not request this, please ignore this email.</p>
+      <p>This link will expire in ${
+        process.env.VERIFICATION_TOKEN_EXPIRY || "1 hour"
+      }.</p>
+    `;
+
+    await sendEmail({
+      email: user.email,
+      subject: "Email Verification",
+      message,
+    });
+  }
+
+  // Find user with the verification token
+  const user = await User.findOne({
+    _id: decoded._id,
+    verificationToken: token,
+  });
+
+  console.log(user);
+
+  if (!user) {
+    throw new ApiError(400, "Invalid verification token");
+  }
+
+  user.status = "Active";
+  user.verificationToken = "";
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Email verified successfully"));
+});
 
 // Request password reset
 const forgotPassword = asyncHandler(async (req, res) => {
@@ -232,7 +228,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   // Generate reset token with JWT
   const resetToken = generateVerificationToken(user._id, "password-reset");
-  
+
   // Save token to user document
   user.resetPasswordToken = resetToken;
   await user.save();
@@ -246,14 +242,16 @@ const forgotPassword = asyncHandler(async (req, res) => {
     <p>Please click on the link below to reset your password:</p>
     <a href="${resetUrl}" target="_blank">Reset Password</a>
     <p>If you did not request this, please ignore this email.</p>
-    <p>This link will expire in ${process.env.VERIFICATION_TOKEN_EXPIRY || "1 hour"}.</p>
+    <p>This link will expire in ${
+      process.env.VERIFICATION_TOKEN_EXPIRY || "1 hour"
+    }.</p>
   `;
 
   try {
     await sendEmail({
       email: user.email,
       subject: "Password Reset Request",
-      message
+      message,
     });
 
     return res
@@ -266,7 +264,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to send password reset email");
   }
 });
-
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -303,12 +300,14 @@ const loginUser = asyncHandler(async (req, res) => {
 
   // Check if user has verified their email
   if (user.status === "Inactive") {
-
-    const verificationToken = generateVerificationToken(user._id, "email-verification");
+    const verificationToken = generateVerificationToken(
+      user._id,
+      "email-verification"
+    );
 
     user.verificationToken = verificationToken;
 
-    user.save();
+    await user.save();
 
     // Create verification URL
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
@@ -319,33 +318,32 @@ const loginUser = asyncHandler(async (req, res) => {
       <p>Please click on the link below to verify your email address:</p>
       <a href="${verificationUrl}" target="_blank">Verify Email</a>
       <p>If you did not request this, please ignore this email.</p>
-      <p>This link will expire in ${process.env.VERIFICATION_TOKEN_EXPIRY || "6 hour"}.</p>
+      <p>This link will expire in ${
+        process.env.VERIFICATION_TOKEN_EXPIRY || "6 hour"
+      }.</p>
     `;
 
     try {
-
       await sendEmail({
         email: user.email,
         subject: "Email Verification",
-        message
+        message,
       });
 
       return res
         .status(403)
         .json(new ApiResponse(200, {}, "Verification email sent successfully"));
-
-
     } catch (error) {
       throw new ApiError(500, "Failed to send verification email");
     }
   }
 
-
-
-
   // Check if user account is suspended
   if (user.status === "Suspended") {
-    throw new ApiError(403, "Your account has been suspended. Please contact support.");
+    throw new ApiError(
+      403,
+      "Your account has been suspended. Please contact support."
+    );
   }
 
   const isPasswordValid = await user.isPasswordCorrect(password);
@@ -376,21 +374,18 @@ const loginUser = asyncHandler(async (req, res) => {
         {
           user: loggedInUser,
           accessToken,
-          refreshToken,
         },
         "User logged in successfully"
       )
     );
 });
 
-
 const logoutUser = asyncHandler(async (req, res) => {
-
   await User.findByIdAndUpdate(
     req.user._id,
     {
       $set: {
-        refreshToken: undefined,
+        refreshToken: null,
       },
     },
     {
@@ -409,28 +404,27 @@ const logoutUser = asyncHandler(async (req, res) => {
     .clearCookie("refreshToken", options)
     .json(new ApiResponse(200, {}, "User logged Out"));
 });
+
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { fullname, email } = req.body;
-  if (!fullname || !email) {
-    throw new ApiError(400, "All field are required");
+  const { fullName, email, mobile } = req.body;
+
+  if (!fullName && !email) {
+    throw new ApiError(400, "Full name or email is required.");
   }
 
-  const user = User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     req.user?._id,
-    {
-      $set: {
-        fullname,
-        email,
-      },
-    },
-    {
-      new: true,
-    }
+    { $set: { fullName, email, mobile } },
+    { new: true }
   ).select("-password");
-  console.log(user);
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "account details updated successfully"));
+    .json(new ApiResponse(200, user, "Account details updated successfully"));
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
@@ -445,6 +439,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 const resetPassword = asyncHandler(async (req, res) => {
   const { token } = req.params;
+  console.log(req.body);
   const { password, confirmPassword } = req.body;
 
   if (password !== confirmPassword) {
@@ -453,7 +448,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   try {
     // Verify and decode token
-    const decoded = jwt.verify(token, process.env.TOKEN_SECRET); 
+    const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
 
     // Check token type
 
@@ -464,7 +459,7 @@ const resetPassword = asyncHandler(async (req, res) => {
     // Find user with valid reset token
     const user = await User.findOne({
       _id: decoded._id,
-      resetPasswordToken: token
+      resetPasswordToken: token,
     });
 
     if (!user) {
@@ -484,8 +479,30 @@ const resetPassword = asyncHandler(async (req, res) => {
   }
 });
 
-export {
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword, confirmNewPassword } = req.body;
 
+  if (newPassword !== confirmNewPassword) {
+    throw new ApiError(400, "Passwords do not match");
+  }
+
+  const user = await User.findById(req.user._id);
+
+  const isPasswordValid = await user.isPasswordCorrect(currentPassword);
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid user credentials");
+  }
+
+  user.password = newPassword;
+
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed successfully"));
+});
+
+export {
   registerUser,
   verifyEmail,
   loginUser,
@@ -494,7 +511,6 @@ export {
   resetPassword,
   logoutUser,
   updateAccountDetails,
-  getCurrentUser  ,
-   
-
+  getCurrentUser,
+  changePassword,
 };
