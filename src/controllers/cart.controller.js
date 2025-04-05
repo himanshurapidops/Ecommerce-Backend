@@ -1,3 +1,4 @@
+import { sendEmail } from "../email/email.js";
 import CartProduct from "../models/cart.model.js";
 import Product from "../models/product.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -8,16 +9,21 @@ export const addToCart = asyncHandler(async (req, res, next) => {
   const { productId, quantity = 1 } = req.body;
   const userId = req.user._id;
 
-  const product = await Product.findById(productId);
+  const product = await Product.findOne({ _id: productId, isAvailable: true });
 
   if (!product) {
     throw new ApiError(404, "Product not found.");
   }
 
   if (product.countInStock < quantity) {
-    throw new ApiError(400, "Insufficient stock");
+    await sendEmail({
+      to: process.env.EMAIL_FROM,
+      from: process.env.ADMIN_EMAIL,
+      subject: "Stock Alert",
+      text: `Product ${product.name} is out of stock.`,
+    });
 
-    //sendmail when insufficient stock and customer wants it
+    throw new ApiError(400, "Insufficient stock");
   }
 
   const existingCartItem = await CartProduct.findOne({ userId, productId });
