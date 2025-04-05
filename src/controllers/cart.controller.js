@@ -4,18 +4,20 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-// Add to Cart
 export const addToCart = asyncHandler(async (req, res, next) => {
   const { productId, quantity = 1 } = req.body;
   const userId = req.user._id;
 
   const product = await Product.findById(productId);
+
   if (!product) {
     throw new ApiError(404, "Product not found.");
   }
 
   if (product.countInStock < quantity) {
     throw new ApiError(400, "Insufficient stock");
+
+    //sendmail when insufficient stock and customer wants it
   }
 
   const existingCartItem = await CartProduct.findOne({ userId, productId });
@@ -50,7 +52,6 @@ export const addToCart = asyncHandler(async (req, res, next) => {
     .json(new ApiResponse(201, savedCartItem, "Product added to cart"));
 });
 
-// Get Cart
 export const getCart = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
 
@@ -69,7 +70,6 @@ export const getCart = asyncHandler(async (req, res, next) => {
     .json(new ApiResponse(200, { cartItems, totalAmount }, "Cart fetched"));
 });
 
-// Remove From Cart
 export const removeFromCart = asyncHandler(async (req, res, next) => {
   const { cartItemId } = req.params;
   const userId = req.user._id;
@@ -84,7 +84,6 @@ export const removeFromCart = asyncHandler(async (req, res, next) => {
   res.status(200).json(new ApiResponse(200, null, "Item removed from cart"));
 });
 
-// Clear Cart
 export const clearCart = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
 

@@ -69,6 +69,7 @@ export const getProductsByCategory = asyncHandler(async (req, res) => {
       )
     );
 });
+
 export const getProductById = asyncHandler(async (req, res) => {
   const { productId } = req.params;
 
@@ -294,6 +295,36 @@ export const updateProductStock = asyncHandler(async (req, res) => {
     );
 });
 
+// export const deleteProduct = asyncHandler(async (req, res) => {
+//   const { productId } = req.params;
+
+//   if (!mongoose.Types.ObjectId.isValid(productId)) {
+//     throw new ApiError(400, "Invalid product ID");
+//   }
+
+//   const product = await Product.findById(productId);
+//   if (!product) {
+//     throw new ApiError(404, "Product not found");
+//   }
+
+//   if (Array.isArray(product.images) && product.images.length > 0) {
+//     for (const imageUrl of product.images) {
+//       const publicId = imageUrl.split("/").pop().split(".")[0];
+//       try {
+//         await deleteFromCloudinary(`ecommerce/${publicId}`);
+//       } catch (error) {
+//         console.error("Cloudinary delete error:", error.message);
+//       }
+//     }
+//   }
+
+//   await product.deleteOne();
+
+//   res
+//     .status(200)
+//     .json(new ApiResponse(200, null, "Product deleted successfully"));
+// });
+
 export const deleteProduct = asyncHandler(async (req, res) => {
   const { productId } = req.params;
 
@@ -306,21 +337,11 @@ export const deleteProduct = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Product not found");
   }
 
-  if (Array.isArray(product.images) && product.images.length > 0) {
-    for (const imageUrl of product.images) {
-      const publicId = imageUrl.split("/").pop().split(".")[0]; // safer and simpler
-      try {
-        await deleteFromCloudinary(`ecommerce/${publicId}`); // use your common prefix
-      } catch (error) {
-        console.error("Cloudinary delete error:", error.message);
-        // optionally log or collect failed deletions here
-      }
-    }
-  }
+  product.isAvailable = false;
 
-  await product.deleteOne();
+  const updatedProduct = await product.save();
 
   res
     .status(200)
-    .json(new ApiResponse(200, null, "Product deleted successfully"));
+    .json(new ApiResponse(200, updatedProduct, "Product deleted successfully"));
 });

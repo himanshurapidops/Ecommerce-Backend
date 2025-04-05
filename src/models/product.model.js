@@ -29,6 +29,10 @@ const productSchema = new Schema(
       type: Number,
       required: true,
     },
+    isAvailable: {
+      type: Boolean,
+      default: true,
+    },
     countInStock: {
       type: Number,
       required: true,
