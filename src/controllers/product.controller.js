@@ -13,7 +13,7 @@ export const getAllProducts = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const products = await Product.find()
+    const products = await Product.find({ isAvailable: true })
       .populate("category")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -48,14 +48,20 @@ export const getProductsByCategory = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 10;
   const skip = (page - 1) * limit;
 
+  // want promise and total in such a way that product which has isAvailable value as true will be fetched
+
   const [products, total] = await Promise.all([
-    Product.find({ category: categoryId })
+    Product.find({ category: categoryId, isAvailable: true })
       .populate("category")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
-    Product.countDocuments({ category: categoryId }),
+    Product.countDocuments({ category: categoryId, isAvailable: true }),
   ]);
+
+  if (products.length === 0) {
+    throw new ApiError(404, "No products found in this category");
+  }
 
   const totalPages = Math.ceil(total / limit);
 
@@ -77,7 +83,7 @@ export const getProductById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid product ID");
   }
 
-  const product = await Product.findById(productId).populate("category");
+  const product = await Product.findOne({ _id: productId, isAvailable: true });
 
   if (!product) {
     throw new ApiError(404, "Product not found");
