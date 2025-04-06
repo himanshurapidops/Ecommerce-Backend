@@ -1,5 +1,5 @@
 import morgan from "morgan";
-import logger from "../cronjobs/logger.js";
+import logger from "../service/logger.js";
 
 const stream = {
   write: (message) => logger.info(message.trim()),

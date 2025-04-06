@@ -19,14 +19,14 @@ router.route("/login").post(loginUser);
 router.route("/register").post(registerUser);
 router.route("/refresh-token").post(refreshAccessToken);
 router.route("/verify-email/:token").get(verifyEmail);
+router.route("/forget-password").post(forgotPassword);
+router.route("/reset-password/:token").post(resetPassword);
 
 //secure route
-router.route("/logout").post(verifyJWT, logoutUser);
-
-router.route("/forget-password").post(verifyJWT, forgotPassword);
-router.route("/reset-password/:token").post(resetPassword);
-router.route("/change-password").post(verifyJWT, changePassword);
-router.route("/current-user").get(verifyJWT, getCurrentUser);
-router.route("/update-account").put(verifyJWT, updateAccountDetails);
+router.use(verifyJWT);
+router.route("/logout").post(logoutUser);
+router.route("/change-password").post(changePassword);
+router.route("/current-user").get(getCurrentUser);
+router.route("/update-account").put(updateAccountDetails);
 
 export default router;

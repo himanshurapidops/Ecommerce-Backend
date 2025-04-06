@@ -9,6 +9,8 @@ import {
   deleteProduct,
 } from "../controllers/product.controller.js";
 import upload from "../middlewares/multer.middleware.js";
+import { isAdmin } from "../middlewares/isAdmin.middlware.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const uploadfile = upload.array("images", 9);
 const router = express.Router();
@@ -16,6 +18,10 @@ const router = express.Router();
 router.get("/", getAllProducts);
 router.get("/category/:categoryId", getProductsByCategory);
 router.get("/:productId", getProductById);
+
+//secure route
+router.use(verifyJWT);
+router.use(isAdmin);
 router.post("/", uploadfile, createProduct);
 router.put("/:productId", uploadfile, updateProduct);
 router.put("/:productId/stock", updateProductStock);

@@ -6,13 +6,15 @@ import {
   updateAddress,
   deleteAddress,
 } from "../controllers/address.controller.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
+router.use(verifyJWT);
 router.post("/", createAddress);
 router.get("/", getUserAddresses);
-router.get("/:id", getAddressById);
-router.put("/:id", updateAddress);
-router.delete("/:id", deleteAddress);
+router.get("/:addressId", getAddressById);
+router.put("/:addressId", updateAddress);
+router.delete("/:addressId", deleteAddress);
 
 export default router;
