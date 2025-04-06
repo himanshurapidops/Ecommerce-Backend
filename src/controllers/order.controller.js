@@ -9,11 +9,12 @@ import mongoose from "mongoose";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { sendEmail } from "../email/email.js"; // ensure this is imported if used
 
-// 🎯 Create Payment Intent
 export const createPaymentIntent = asyncHandler(async (req, res) => {
+  // const userId = "67efb3efdbe41b3e5d5f2e66";
   const userId = req.user._id;
-  const { addressId, paymentMethodId } = req.body;
+  const { addressId } = req.body;
 
   const address = await Address.findOne({ _id: addressId, userId });
   if (!address) throw new ApiError(404, "Address not found");
@@ -22,40 +23,42 @@ export const createPaymentIntent = asyncHandler(async (req, res) => {
     "productId",
     "name price countInStock"
   );
+  if (!cartItems.length) throw new ApiError(400, "Cart is empty");
 
-  if (cartItems.length === 0) {
-    throw new ApiError(400, "Cart is empty");
-  }
-
+  let totalAmount = 0;
   for (const item of cartItems) {
     if (item.productId.countInStock < item.quantity) {
       throw new ApiError(400, `Insufficient stock for ${item.productId.name}`);
     }
+    totalAmount += item.productId.price * item.quantity;
   }
 
-  let totalAmount = 0;
-  cartItems.forEach((item) => {
-    totalAmount += item.productId.price * item.quantity;
-  });
-
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(totalAmount * 100),
-    currency: "inr",
-    payment_method: paymentMethodId,
-    confirm: true,
-    return_url: "https://frontend.com/payment-success",
-    metadata: {
-      userId: userId.toString(),
-      addressId: addressId.toString(),
-    },
-  });
+  let paymentIntent;
+  try {
+    paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(totalAmount * 100),
+      currency: "inr",
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: "never",
+      },
+      payment_method: "pm_card_visa",
+      confirm: true,
+      metadata: {
+        userId: userId.toString(),
+        addressId: addressId.toString(),
+      },
+    });
+  } catch (err) {
+    throw new ApiError(500, "Stripe payment creation failed", [err.message]);
+  }
 
   res.status(200).json(
     new ApiResponse(
       200,
       {
-        paymentIntentId: paymentIntent.id,
         clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
         totalAmount,
       },
       "Payment Intent created"
@@ -63,15 +66,10 @@ export const createPaymentIntent = asyncHandler(async (req, res) => {
   );
 });
 
-// 🧾 Create Order After Successful Payment
 export const createOrder = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
+  // const userId = "67efb3efdbe41b3e5d5f2e66";
   const { paymentIntentId, addressId } = req.body;
-
-  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-  if (paymentIntent.status !== "succeeded") {
-    throw new ApiError(400, "Payment not successful");
-  }
+  const userId = req.user._id;
 
   const existingOrder = await Order.findOne({ paymentId: paymentIntentId });
   if (existingOrder) {
@@ -85,22 +83,47 @@ export const createOrder = asyncHandler(async (req, res) => {
     "productId",
     "name price countInStock"
   );
+  if (!cartItems.length) throw new ApiError(400, "Cart is empty");
 
-  if (cartItems.length === 0) throw new ApiError(400, "Cart is empty");
+  let paymentIntent;
+  try {
+    console.log(paymentIntentId);
+    paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  } catch (err) {
+    throw new ApiError(500, "Stripe payment verification failed", [
+      err.message,
+    ]);
+  }
 
-  const products = cartItems.map((item) => ({
-    productId: item.productId._id,
-    quantity: item.quantity,
-    priceAtPurchase: item.productId.price,
-  }));
+  if (paymentIntent.status !== "succeeded") {
+    if (
+      paymentIntent.status === "requires_confirmation" ||
+      paymentIntent.status === "requires_action" ||
+      paymentIntent.status === "requires_payment_method"
+    ) {
+      try {
+        paymentIntent = await stripe.paymentIntents.confirm(paymentIntentId, {
+          payment_method: "pm_card_visa",
+        });
+      } catch (err) {
+        throw new ApiError(400, "Stripe confirmation failed", [err.message]);
+      }
+    } else {
+      throw new ApiError(400, "Payment cannot be confirmed in current state");
+    }
+  }
 
   let totalAmount = 0;
-  cartItems.forEach((item) => {
+  const products = cartItems.map((item) => {
     totalAmount += item.productId.price * item.quantity;
+    return {
+      productId: item.productId._id,
+      quantity: item.quantity,
+      priceAtPurchase: item.productId.price,
+    };
   });
 
   const orderId = `ORD-${uuidv4().substring(0, 8)}`;
-
   const newOrder = new Order({
     userId,
     orderId,
@@ -133,6 +156,26 @@ export const createOrder = asyncHandler(async (req, res) => {
     );
 
     await CartProduct.deleteMany({ userId }, { session });
+
+    try {
+      const productList = cartItems
+        .map(
+          (item) =>
+            `• ${item.productId.name} x${item.quantity} - ₹${
+              item.productId.price * item.quantity
+            }`
+        )
+        .join("\n");
+
+      await sendEmail({
+        to: req.user?.email || "test@example.com",
+        from: process.env.ADMIN_EMAIL,
+        subject: "🧾 Order Confirmation",
+        text: `Thank you for your order!\n\nOrder ID: ${orderId}\n\n${productList}\n\nTotal Paid: ₹${totalAmount}\n\nYour order is being processed.`,
+      });
+    } catch (emailErr) {
+      console.warn("Email sending failed:", emailErr.message);
+    }
 
     await session.commitTransaction();
     session.endSession();
