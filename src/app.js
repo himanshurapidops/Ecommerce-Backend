@@ -4,8 +4,11 @@ import cors from "cors";
 import globalErrorHandler from "./middlewares/globalErrorHandler.js";
 import morgan from "morgan";
 import "./cronjobs/cron.js";
+import morganMiddleware from "./middlewares/logger.middleware.js";
 
 const app = express();
+
+app.use(morganMiddleware);
 
 app.use(cors());
 app.use(cookieParser());

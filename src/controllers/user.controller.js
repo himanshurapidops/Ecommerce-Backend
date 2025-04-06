@@ -293,7 +293,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 };
 
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, mobile, password } = req.body;
+  let { email, mobile, password } = req.body;
 
   if (!email && !mobile) {
     throw new ApiError(400, "Email or mobile number is required");

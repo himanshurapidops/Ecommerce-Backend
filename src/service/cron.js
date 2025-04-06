@@ -25,19 +25,19 @@ cron.schedule("0 20 * * *", async () => {
   await sendEmail(option);
 });
 
-setInterval(async () => {
-  const products = await Product.find();
-  const emailHTML = generateStockReportEmail(products);
+// setInterval(async () => {
+//   const products = await Product.find();
+//   const emailHTML = generateStockReportEmail(products);
 
-  const option = {
-    from: process.env.SMTP_EMAIL,
-    to: process.env.ADMIN_EMAIL,
-    subject: "📦 Daily Product Stock Report",
-    html: emailHTML,
-  };
+//   const option = {
+//     from: process.env.SMTP_EMAIL,
+//     to: process.env.ADMIN_EMAIL,
+//     subject: "📦 Daily Product Stock Report",
+//     html: emailHTML,
+//   };
 
-  await sendEmail(option);
-}, 4000);
+//   await sendEmail(option);
+// }, 4000);
 
 function generateStockReportEmail(products) {
   const rows = products
