@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import globalErrorHandler from "./middlewares/globalErrorHandler.js";
 import morgan from "morgan";
+import "./cronjobs/cron.js";
 
 const app = express();
 

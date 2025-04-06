@@ -20,7 +20,7 @@ export const addToCart = asyncHandler(async (req, res, next) => {
       to: process.env.EMAIL_FROM,
       from: process.env.ADMIN_EMAIL,
       subject: "Stock Alert",
-      text: `Product ${product.name} is out of stock.`,
+      html: `<p>Product ${product.name} is running low on stock. Customer wants ${quantity} units of ${product.name} and we have only ${product.countInStock} units left</p>`,
     });
 
     throw new ApiError(400, "Insufficient stock");

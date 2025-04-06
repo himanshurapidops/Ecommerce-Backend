@@ -2,9 +2,9 @@ import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
   service: process.env.SMTP_SERVICE,
-  port: 678,
+  port: process.env.SMTP_PORT,
   secure: true,
-  host: "smpt.gmail.com",
+  host: process.env.SMTP_HOST,
   auth: {
     user: process.env.SMTP_EMAIL,
     pass: process.env.SMTP_PASSWORD,
@@ -12,10 +12,10 @@ const transporter = nodemailer.createTransport({
 });
 export const sendEmail = async (options) => {
   const mailOptions = {
-    from: process.env.SMPT_EMAIL,
-    to: options.email,
+    from: process.env.SMTP_EMAIL,
+    to: options.to,
     subject: options.subject,
-    html: options.message,
+    html: options.html,
   };
 
   transporter.sendMail(mailOptions, function (error, info) {
