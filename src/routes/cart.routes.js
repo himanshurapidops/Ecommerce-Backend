@@ -6,13 +6,17 @@ import {
   clearCart,
 } from "../controllers/cart.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import {
+  addToCartValidator,
+  removeFromCartValidator,
+} from "../validators/cart.validator.js";
 
 const router = express.Router();
 
 router.use(verifyJWT);
-router.post("/add", addToCart);
+router.post("/add", addToCartValidator, addToCart);
 router.get("/", getCart);
-router.delete("/:cartItemId", removeFromCart);
+router.delete("/:cartItemId", removeFromCartValidator, removeFromCart);
 router.delete("/", clearCart);
 
 export default router;

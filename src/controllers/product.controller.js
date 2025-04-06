@@ -347,6 +347,11 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 
   const updatedProduct = await product.save();
 
+  // Delete associated reviews
+  await Review.deleteMany({
+    product: productId,
+  });
+
   res
     .status(200)
     .json(new ApiResponse(200, updatedProduct, "Product deleted successfully"));

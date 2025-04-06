@@ -6,16 +6,19 @@ import {
   deleteCategory,
 } from "../controllers/category.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { isAdmin } from "../middlewares/isAdmin.middlware.js";
+import {
+  createCategoryValidator,
+  updateCategoryValidator,
+  deleteCategoryValidator,
+} from "../validators/category.validator.js";
 
 const router = express.Router();
 
 router.get("/", getCategories);
 
 router.use(verifyJWT);
-router.use(isAdmin);
-router.post("/", createCategory);
-router.put("/:slug", updateCategory);
-router.delete("/:slug", deleteCategory);
+router.post("/", createCategoryValidator, createCategory);
+router.put("/:slug", updateCategoryValidator, updateCategory);
+router.delete("/:slug", deleteCategoryValidator, deleteCategory);
 
 export default router;
