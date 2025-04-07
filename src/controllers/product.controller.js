@@ -14,6 +14,7 @@ export const getAllProducts = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const products = await Product.find({ isAvailable: true })
+      .select("-isAvailable -__v ")
       .populate("category")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -164,7 +165,7 @@ export const createProduct = asyncHandler(async (req, res) => {
 });
 
 export const updateProduct = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const { productId: id } = req.params;
   const {
     name,
     description,

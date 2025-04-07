@@ -64,6 +64,10 @@ export const validatePagination = [
     .optional()
     .isInt({ min: 1 })
     .withMessage("Limit must be at least 1"),
+  query("skip")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Skip must be a non-negative integer"),
 ];
 
 export const validateCategoryId = [

@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import Product from "../models/product.model.js";
 import Review from "../models/review.model.js";
 import { User } from "../models/user.model.js";
+import mongoose from "mongoose";
 
 export const createReview = asyncHandler(async (req, res) => {
   const { productId, rating, comment } = req.body;
@@ -35,7 +36,9 @@ export const createReview = asyncHandler(async (req, res) => {
     comment,
   });
 
-  const reviews = await Review.find({ product: productId });
+  const reviews = await Review.find({ product: productId }).select(
+    "rating comment user product _id"
+  );
 
   const numReviews = reviews.length;
   const avgRating =

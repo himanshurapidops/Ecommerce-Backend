@@ -21,12 +21,22 @@ export const createAddress = asyncHandler(async (req, res) => {
     userId,
   });
 
-  res.json(new ApiResponse(201, address, "Address created successfully"));
+  if (!address) {
+    throw new ApiError(500, "Failed to create address");
+  }
+
+  const result = await Address.findById(address._id).select(
+    "addressLine1 city state pincode country mobile"
+  );
+
+  res.json(new ApiResponse(201, result, "Address created successfully"));
 });
 export const getUserAddresses = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
-  const addresses = await Address.find({ userId });
+  const addresses = await Address.find({ userId }).select(
+    "addressLine1 city state pincode country mobile"
+  );
 
   return res
     .status(200)
@@ -42,10 +52,12 @@ export const getUserAddresses = asyncHandler(async (req, res) => {
 });
 
 export const getAddressById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const { addressId } = req.params;
   const userId = req.user._id;
 
-  const address = await Address.findOne({ _id: id, userId });
+  const address = await Address.findOne({ _id: addressId, userId }).select(
+    "addressLine1 city state pincode country mobile"
+  );
 
   if (!address) {
     throw new ApiError(404, "Address not found");
@@ -58,13 +70,13 @@ export const getAddressById = asyncHandler(async (req, res) => {
 export const updateAddress = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { addressLine1, city, state, pincode, country, mobile } = req.body;
-  const addressId = req.params.id;
+  const id = req.params.addressId;
 
   if (!addressLine1 || !city || !state || !pincode || !country || !mobile) {
     throw new ApiError(400, "All fields are required");
   }
   const address = await Address.findOneAndUpdate(
-    { _id: addressId, userId },
+    { _id: id, userId },
     {
       addressLine1,
       city,
@@ -73,7 +85,9 @@ export const updateAddress = asyncHandler(async (req, res) => {
       country,
       mobile,
     },
-    { new: true }
+    { new: true },
+    { runValidators: true },
+    { select: "addressLine1 city state pincode country mobile" }
   );
 
   if (!address) {
@@ -86,14 +100,14 @@ export const updateAddress = asyncHandler(async (req, res) => {
 });
 
 export const deleteAddress = asyncHandler(async (req, res) => {
-  const addressId = req.params.id;
+  const id = req.params.addressId;
   const userId = req.user._id;
 
-  if (!addressId) {
+  if (!id) {
     throw new ApiError(400, "Address ID is required");
   }
 
-  const address = await Address.findOneAndDelete({ _id: addressId, userId });
+  const address = await Address.findOneAndDelete({ _id: id, userId });
 
   if (!address) {
     throw new ApiError(404, "Address not found");
