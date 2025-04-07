@@ -31,6 +31,7 @@ export const createAddress = asyncHandler(async (req, res) => {
 
   res.json(new ApiResponse(201, result, "Address created successfully"));
 });
+
 export const getUserAddresses = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 

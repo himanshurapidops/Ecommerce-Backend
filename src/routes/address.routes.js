@@ -24,3 +24,4 @@ router.put("/:addressId", updateAddressValidator, updateAddress);
 router.delete("/:addressId", deleteAddressValidator, deleteAddress);
 
 export default router;
+  
