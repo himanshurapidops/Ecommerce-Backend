@@ -373,7 +373,7 @@ const loginUser = asyncHandler(async (req, res) => {
   );
 
   const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken -verificationToken -resetPasswordToken"
+    "-password -refreshToken -verificationToken -resetPasswordToken -createdAt -updatedAt -__v  "
   );
 
   const options = {
@@ -447,7 +447,9 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     {
       new: true,
     }
-  ).select("-password -refreshToken -verificationToken -resetPasswordToken");
+  ).select(
+    "-password -refreshToken -verificationToken -resetPasswordToken -createdAt -updatedAt -__v  "
+  );
 
   if (!user) {
     throw new ApiError(404, "User does not exist");
