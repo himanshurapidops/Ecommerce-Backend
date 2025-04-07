@@ -5,6 +5,7 @@ import {
   updateCategory,
   deleteCategory,
 } from "../controllers/category.controller.js";
+import { isAdmin } from "../middlewares/isAdmin.middlware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import {
   createCategoryValidator,
@@ -19,6 +20,8 @@ router.get("/", getCategories);
 router.use(verifyJWT);
 router.post("/", createCategoryValidator, createCategory);
 router.put("/:slug", updateCategoryValidator, updateCategory);
+
+router.use(isAdmin);
 router.delete("/:slug", deleteCategoryValidator, deleteCategory);
 
 export default router;

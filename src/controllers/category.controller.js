@@ -25,15 +25,17 @@ export const createCategory = asyncHandler(async (req, res) => {
     slug: slug(name),
   });
 
-  if (!category) {
+  const result = await Category.findById(category._id).select("name slug");
+
+  if (!result) {
     throw new ApiError(500, "Failed to create category");
   }
 
-  res.json(new ApiResponse(201, category, "Category created successfully"));
+  res.json(new ApiResponse(201, result, "Category created successfully"));
 });
 
 export const getCategories = asyncHandler(async (req, res) => {
-  const categories = await Category.find();
+  const categories = await Category.find({}).select("name slug");
 
   if (!categories) {
     throw new ApiError(404, "Categories not found");
@@ -56,7 +58,11 @@ export const updateCategory = asyncHandler(async (req, res) => {
       name,
       slug: slug(name),
     },
-    { new: true, runValidators: true }
+    {
+      new: true,
+      runValidators: true,
+      select: "name slug",
+    }
   );
 
   if (!updatedCategory) {
