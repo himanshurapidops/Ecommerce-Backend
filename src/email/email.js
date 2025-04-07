@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { ApiError } from "../utils/ApiError.js";
 
 const transporter = nodemailer.createTransport({
   service: process.env.SMTP_SERVICE,
@@ -18,11 +19,10 @@ export const sendEmail = async (options) => {
     html: options.html,
   };
 
-  transporter.sendMail(mailOptions, function (error, info) {
-    if (error) {
-      console.log(error);
-    } else {
-      console.log("Email sent: " + info.response);
-    }
-  });
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent: " + info.response);
+  } catch (error) {
+    throw new ApiError(500, error.message);
+  }
 };

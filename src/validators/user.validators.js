@@ -44,19 +44,20 @@ export const resetPasswordValidator = [
 ];
 
 export const changePasswordValidator = [
-  body("oldPassword").notEmpty().withMessage("Old password is required"),
+  body("currentPassword").notEmpty().withMessage("Old password is required"),
   body("newPassword")
     .isLength({ min: 6 })
     .withMessage("New password must be at least 6 characters"),
-  body("confirmPassword")
+  body("confirmNewPassword")
     .custom((value, { req }) => value === req.body.newPassword)
     .withMessage("New password and confirm password do not match"),
 ];
 
 export const updateAccountValidator = [
-  body("fullName").notEmpty().withMessage("Full name is required"),
-  body("email").isEmail().withMessage("Valid email is required"),
+  body("fullName").notEmpty().optional().withMessage("Full name is required"),
+  body("email").isEmail().optional().withMessage("Valid email is required"),
   body("mobile")
+    .optional()
     .notEmpty()
     .isMobilePhone()
     .withMessage("Valid mobile number is required"),

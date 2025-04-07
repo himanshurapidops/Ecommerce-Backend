@@ -12,12 +12,12 @@ import upload from "../middlewares/multer.middleware.js";
 import { isAdmin } from "../middlewares/isAdmin.middlware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
-import {
-  createProductValidator,
-  updateProductValidator,
-  updateProductStockValidator,
-  deleteProductValidator,
-} from "../validators/product.validator.js";
+// import {
+//   createProductValidator,
+//   updateProductValidator,
+//   updateProductStockValidator,
+//   deleteProductValidator,
+// } from "../validators/product.validator.js";
 
 const uploadfile = upload.array("images", 9);
 const router = express.Router();

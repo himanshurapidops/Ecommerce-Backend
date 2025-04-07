@@ -14,7 +14,7 @@ const generateVerificationToken = (userId, type) => {
     },
     process.env.TOKEN_SECRET,
     {
-      expiresIn: process.env.VERIFICATION_TOKEN_EXPIRY || "1h", // Default 1 hour
+      expiresIn: process.env.VERIFICATION_TOKEN_EXPIRY || "2h", // Default 1 hour
     }
   );
 };
@@ -113,16 +113,17 @@ const registerUser = asyncHandler(async (req, res) => {
     <p>Please click on the link below to verify your email address:</p>
     <a href="${verificationUrl}" target="_blank">Verify Email</a>
     <p>If you did not request this, please ignore this email.</p>
+    <p>verification token: ${verificationToken}</p>
     <p>This link will expire in ${
-      process.env.VERIFICATION_TOKEN_EXPIRY || "1 hour"
+      process.env.VERIFICATION_TOKEN_EXPIRY || "2 hour"
     }.</p>
   `;
 
   try {
     await sendEmail({
-      email: user.email,
+      to: user.email,
       subject: "Email Verification",
-      message,
+      html: message,
     });
 
     const createdUser = await User.findById(user._id).select(
@@ -185,9 +186,9 @@ const verifyEmail = asyncHandler(async (req, res) => {
     `;
 
     await sendEmail({
-      email: user.email,
+      to: user.email,
       subject: "New Email Verification Link",
-      message,
+      html: message,
     });
 
     return res
@@ -214,11 +215,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   if (!email) {
     throw new ApiError(400, "Email is required");
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    throw new ApiError(400, "Invalid email format");
   }
 
   const user = await User.findOne({ email });
@@ -251,9 +247,9 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   try {
     await sendEmail({
-      email: user.email,
+      to: user.email,
       subject: "Password Reset Request",
-      message,
+      html: message,
     });
 
     user.resetPasswordToken = resetToken;
@@ -431,8 +427,8 @@ const logoutUser = asyncHandler(async (req, res) => {
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { fullName, email, mobile } = req.body;
 
-  if (!fullName || !email || !mobile) {
-    throw new ApiError(400, "All field are required");
+  if (!fullName && !email && !mobile) {
+    throw new ApiError(400, "At least one field is required");
   }
 
   if (email) {
@@ -525,10 +521,11 @@ const resetPassword = asyncHandler(async (req, res) => {
 });
 
 const changePassword = asyncHandler(async (req, res) => {
-  const { oldPassword, newPassword, confirmPassword } = req.body;
+  const { currentPassword, newPassword, confirmNewPassword } = req.body;
 
-  if (newPassword !== confirmPassword) {
-    throw new ApiError(400, "conform password and newpassword are not same   ");
+  console.log(currentPassword, newPassword, confirmNewPassword);
+  if (newPassword !== confirmNewPassword) {
+    throw new ApiError(400, "Confirm password and newpassword are not same   ");
   }
 
   const user = await User.findById(req.user?._id);
@@ -537,7 +534,7 @@ const changePassword = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
-  const isPasswordValid = await user.isPasswordCorrect(oldPassword);
+  const isPasswordValid = await user.isPasswordCorrect(currentPassword);
 
   if (!isPasswordValid) {
     throw new ApiError(401, "Invalid old password");

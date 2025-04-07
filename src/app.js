@@ -5,7 +5,7 @@ import globalErrorHandler from "./middlewares/globalErrorHandler.js";
 import morgan from "morgan";
 import "./service/cron.js";
 import morganMiddleware from "./middlewares/logger.middleware.js";
-
+import { validate } from "./middlewares/validator.middleware.js";
 const app = express();
 
 app.use(morganMiddleware);
@@ -16,6 +16,7 @@ app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(morgan("dev"));
 app.use(express.static("public"));
+app.use(validate);
 
 //routes import
 
@@ -44,7 +45,7 @@ app.use("/api/v1/cart", cartRouter);
 
 app.use("/api/v1/category", CategoryRouter);
 
-app.all("*", (req, res) => {
+app.all("*", (_, res) => {
   res.status(404).json(new ApiResponse(404, {}, "Route not found"));
 });
 
